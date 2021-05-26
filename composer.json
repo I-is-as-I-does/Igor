@@ -1,0 +1,25 @@
+{
+    "name": "ssitu/igor",
+    "description": "Igor will auto-generate your interfaces files.",
+    "type": "library",
+    "keywords" :["php", "interface", "automation"],
+    "homepage":"https://github.com/I-is-as-I-does/Igor",
+    "license": "MIT",
+    "readme":"README.md",
+    "authors": [
+        {
+            "name": "I-is-as-I-does",
+            "email": "66915011+I-is-as-I-does@users.noreply.github.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {},
+    "suggest": {
+        "ssitu/euclid": "To run Igor from CLI"
+    },
+    "autoload": {
+        "psr-4": {
+            "SSITU\\Igor\\": "src"
+        }
+    }
+}
