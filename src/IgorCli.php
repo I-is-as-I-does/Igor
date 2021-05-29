@@ -18,33 +18,37 @@ class IgorCli
     {
         $this->Companion = EuclidCompanion::inst();
         $this->Igor = new Igor();
-        if($runBuild){
+        if ($runBuild) {
             return $this->build();
-        }     
+        }
     }
 
-    private function reset(){
+    private function reset()
+    {
         $this->src = '';
-        $this->dst = ''; 
-        $this->key = '';      
+        $this->dst = '';
+        $this->key = '';
     }
 
-    public function build(){
+    public function build()
+    {
         $this->Companion->set_callableMap($this->callableMap);
         $this->Companion::echoDfltNav();
         $this->key = $this->Companion->printCallableAndListen();
         return $this->transition();
     }
 
-    private function transition(){
+    private function transition()
+    {
         $this->Companion->set_callableMap([]);
-        return $this->setSrc();  
+        return $this->setSrc();
     }
 
-    private function setSrc(){
+    private function setSrc()
+    {
 
         $next = 'Set source ';
-        if($this->key == 1){
+        if ($this->key == 1) {
             $next .= 'dir';
         } else {
             $next .= 'path';
@@ -52,16 +56,17 @@ class IgorCli
         $next .= ' > ';
         $this->Companion::msg($next);
         $resp = $this->Companion->listenToRequest();
-        if(($this->key == 1 && !is_dir($resp)) || ($this->key == 2 && !is_file($resp))){
-            $this->Companion::msg('Unvalid path','yellow');
+        if (($this->key == 1 && !is_dir($resp)) || ($this->key == 2 && !is_file($resp))) {
+            $this->Companion::msg('Unvalid path', 'yellow');
             return $this->setSrc();
         }
-            $this->src = $resp;
-            return $this->setDst();    
+        $this->src = $resp;
+        return $this->setDst();
     }
-    private function setDst(){
+    private function setDst()
+    {
         $next = 'Set destination ';
-        if($this->key == 1){
+        if ($this->key == 1) {
             $next .= 'dir';
         } else {
             $next .= 'path';
@@ -69,32 +74,31 @@ class IgorCli
         $next .= ' > ';
         $this->Companion::msg($next);
         $resp = $this->Companion->listenToRequest();
-        if(($this->key == 1 && !is_dir($resp)) || ($this->key == 2 && !is_dir(dirname($resp)))){
-            $this->Companion::msg('Unvalid path','yellow');
+        if (($this->key == 1 && !is_dir($resp)) || ($this->key == 2 && !is_dir(dirname($resp)))) {
+            $this->Companion::msg('Unvalid path', 'yellow');
             return $this->setDst();
         }
-        if($this->key == 2 && $this->src === $resp){
-            $this->Companion::msg('Nope: src path and dest path are the same; this would erase src file','yellow');
+        if ($this->key == 2 && $this->src === $resp) {
+            $this->Companion::msg('Nope: src path and dest path are the same; this would erase src file', 'yellow');
             return $this->setDst();
         }
         $this->dst = $resp;
         return $this->handleCmd();
     }
 
-
     private function handleCmd()
     {
-        if(empty($this->key) || empty($this->dst) || empty($this->src)){
+        if (empty($this->key) || empty($this->dst) || empty($this->src)) {
             return false;
         }
         $method = 'doOneInterface';
         if ($this->key == 1) {
             $method = 'doALLtheInterfaces';
-        } 
-            $build = $this->Igor->$method($this->src, $this->dst);
-            $this->reset();
-            $this->key = $this->Companion->printRslt($build, false, true, $this->callableMap);
-            return $this->transition();
+        }
+        $build = $this->Igor->$method($this->src, $this->dst);
+        $this->reset();
+        $this->key = $this->Companion->printRslt($build, false, true, $this->callableMap);
+        return $this->transition();
     }
 
 }

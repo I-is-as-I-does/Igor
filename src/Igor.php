@@ -98,7 +98,7 @@ class Igor implements Igor_i
 
     public function doOneInterface($srcPath, $destPath)
     {
-        if($srcPath == $destPath){
+        if ($srcPath == $destPath) {
             return ['err' => 'Nope: src path and dest path are the same; this would erase src file'];
         }
         $rawcntent = file_get_contents($srcPath);
