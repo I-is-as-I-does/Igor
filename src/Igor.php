@@ -113,7 +113,7 @@ class Igor implements Igor_i
         $stock = [];
         $stock[] = '<?php';
 
-        $classnpattern = '/\w+(?=\s*{)/i';
+        $classnpattern = '/\w+(?=(\s+|\{))/i';
         $matchclassname = \preg_match($classnpattern, $splithead[1], $matches);
         $classname = $matches[0];
         $intrname = basename($destPath, '.php');
@@ -185,8 +185,9 @@ class Igor implements Igor_i
 
                 if ($param->isOptional()) {
                     $dflt = $param->getDefaultValue();
-
-                    $mthline .= ' = ' . var_export($dflt, true);
+                    $exportDflt = var_export($dflt, true);
+                    $dflt = preg_replace('/((?<=array\s\()\s+|\s+(?=\)))/', '', $exportDflt);
+                    $mthline .= ' = ' . $dflt;
                 }
                 $stack[] = $mthline;
             }
