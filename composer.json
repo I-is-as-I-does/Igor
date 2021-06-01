@@ -13,7 +13,7 @@
         }
     ],
     "minimum-stability": "stable",
-    "require": {},
+    "require": { "ssitu/jacktrades": "^2.1.3"},
     "suggest": {
         "ssitu/euclid": "To run Igor from CLI"
     },

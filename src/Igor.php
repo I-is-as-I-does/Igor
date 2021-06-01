@@ -2,6 +2,8 @@
 /* This file is part of Igor | SSITU | (c) 2021 I-is-as-I-does | MIT License */
 namespace SSITU\Igor;
 
+use SSITU\Jack\Jack;
+
 class Igor implements Igor_i
 {
     public $srcFilesGlobpattrn = "*[!(_i)].php";
@@ -25,7 +27,7 @@ class Igor implements Igor_i
                 return ['err' => 'not a dir, my dear: ' . $srcDir];
             }
         }
-        $this->srcDir = $this->fixTrailingSlash($srcDir);
+        $this->srcDir = Jack::File()->reqTrailingSlash($srcDir);
         if (empty($this->srcFilesGlobpattrn)) {
             $this->guess_srcFilesGlobpattrn();
         }
@@ -42,11 +44,6 @@ class Igor implements Igor_i
         }
 
         return $this->buildIterator();
-    }
-
-    protected function fixTrailingSlash($dirPath)
-    {
-        return trim($dirPath, ' \n\r\t\v\0/\\') . '/';
     }
 
     protected function filterFiles()
@@ -223,7 +220,7 @@ class Igor implements Igor_i
     protected function analyseIntrfdir($intrDir)
     {
 
-        $intrDir = $this->fixTrailingSlash($intrDir);
+        $intrDir = Jack::File()->reqTrailingSlash($intrDir);
         if (in_array($intrDir, ['/', './'])) {
             $intrDir = $this->srcDir;
         }
