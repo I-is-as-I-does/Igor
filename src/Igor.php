@@ -118,7 +118,7 @@ class Igor implements Igor_i
         $stock[] = $this->determineLicense($splithead[0]);
         $stock[] = $namespace;
         $stock[] = 'interface ' . $intrname . ' {';
-
+           
         include $srcPath;
 
         $fullclassn = substr($namespace, 10, -1) . '\\' . $classname;

@@ -2,7 +2,7 @@
 /* This file is part of Igor | SSITU | (c) 2021 I-is-as-I-does | MIT License */
 namespace SSITU\Igor;
 
-use SSITU\Euclid\EuclidCompanion;
+use \SSITU\Euclid\EuclidCompanion;
 
 class IgorCli
 {
