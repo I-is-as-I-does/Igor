@@ -1,9 +1,7 @@
 <?php
 /* This file is part of Igor | SSITU | (c) 2021 I-is-as-I-does | MIT License */
 namespace SSITU\Igor;
-
-use SSITU\Jack\Jack;
-
+use \SSITU\Jack;
 class Igor implements Igor_i
 {
     public $srcFilesGlobpattrn = "*[!(_i)].php";
@@ -27,7 +25,7 @@ class Igor implements Igor_i
                 return ['err' => 'not a dir, my dear: ' . $srcDir];
             }
         }
-        $this->srcDir = Jack::File()->reqTrailingSlash($srcDir);
+        $this->srcDir = Jack\File::reqTrailingSlash($srcDir);
         if (empty($this->srcFilesGlobpattrn)) {
             $this->guess_srcFilesGlobpattrn();
         }
@@ -118,7 +116,7 @@ class Igor implements Igor_i
         $stock[] = $this->determineLicense($splithead[0]);
         $stock[] = $namespace;
         $stock[] = 'interface ' . $intrname . ' {';
-           
+
         include $srcPath;
 
         $fullclassn = substr($namespace, 10, -1) . '\\' . $classname;
@@ -220,7 +218,7 @@ class Igor implements Igor_i
     protected function analyseIntrfdir($intrDir)
     {
 
-        $intrDir = Jack::File()->reqTrailingSlash($intrDir);
+        $intrDir = Jack\File::reqTrailingSlash($intrDir);
         if (in_array($intrDir, ['/', './'])) {
             $intrDir = $this->srcDir;
         }
