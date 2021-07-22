@@ -4,8 +4,8 @@ namespace SSITU\Igor;
 
 interface Igor_i
 {
-    public function doALLtheInterfaces($srcdir, $intfdir);
-    public function doOneInterface($srcfile, $dest);
+    public function doALLtheInterfaces($srcdir, $intfdir, $intrNamespace);
+    public function doOneInterface($srcfile, $dest, $intrNamespace);
     public function set_srcFilesGlobpattrn(string $pattern);
     public function set_intrFilesGlobpattrn(string $pattern);
     public function set_intrFilesSuffx(string $suffx);

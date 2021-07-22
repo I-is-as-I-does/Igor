@@ -1,7 +1,7 @@
 <?php
 /* This file is part of Igor | SSITU | (c) 2021 I-is-as-I-does | MIT License */
 namespace SSITU\Igor;
-use \SSITU\Jack;
+
 class Igor implements Igor_i
 {
     public $srcFilesGlobpattrn = "*[!(_i)].php";
@@ -17,15 +17,17 @@ class Igor implements Igor_i
     protected $intrDir;
 
     protected $srcFiles;
+    protected $intrNamespace;
 
-    public function doALLtheInterfaces($srcDir, $intrDir)
+
+    public function doALLtheInterfaces($srcDir, $intrDir, $intrNamespace)
     {
         foreach ([$srcDir, $intrDir] as $dir) {
             if (!is_dir($dir)) {
                 return ['err' => 'not a dir, my dear: ' . $srcDir];
             }
         }
-        $this->srcDir = Jack\File::reqTrailingSlash($srcDir);
+        $this->srcDir = trim($srcDir, ' \n\r\t\v\0/\\') . '/';
         if (empty($this->srcFilesGlobpattrn)) {
             $this->guess_srcFilesGlobpattrn();
         }
@@ -36,6 +38,8 @@ class Igor implements Igor_i
         }
 
         $this->intrDir = $this->analyseIntrfdir($intrDir);
+
+        $this->intrNamespace = $this->fixIntrNamespace($intrNamespace);
 
         if ($this->rewrite !== true) {
             return $this->filterFiles();
@@ -56,7 +60,7 @@ class Igor implements Igor_i
             foreach ($this->srcFiles as $srck => $srcPath) {
                 $matchIntfName = $this->matchIntfName($srcPath);
                 if (!in_array($matchIntfName, $baseIntfiles)) {
-                    $rslt[] = $this->doOneInterface($srcPath, $this->intrDir . $matchIntfName);
+                    $rslt[] = $this->doInterface($srcPath, $this->intrDir . $matchIntfName);
                 }
             }
             return $rslt;
@@ -81,7 +85,7 @@ class Igor implements Igor_i
         $rslt = [];
         foreach ($this->srcFiles as $srck => $srcPath) {
             $destPath = $this->intrDir . $this->matchIntfName($srcPath);
-            $rslt[] = $this->doOneInterface($srcPath, $destPath);
+            $rslt[] = $this->doInterface($srcPath, $destPath);
         }
         return $rslt;
     }
@@ -91,7 +95,12 @@ class Igor implements Igor_i
         return (count($splithead) > 1 && stripos($splithead[0], 'abstract') === false);
     }
 
-    public function doOneInterface($srcPath, $destPath)
+    public function doOneInterface($srcPath, $destPath, $intrNamespace){
+        $this->intrNamespace = $this->fixIntrNamespace($intrNamespace);
+        return $this->doInterface($srcPath, $destPath);
+    }
+
+    protected function doInterface($srcPath, $destPath)
     {
         if ($srcPath == $destPath) {
             return ['err' => 'Nope: src path and dest path are the same; this would erase src file'];
@@ -112,25 +121,37 @@ class Igor implements Igor_i
         $matchclassname = \preg_match($classnpattern, $splithead[1], $matches);
         $classname = $matches[0];
         $intrname = basename($destPath, '.php');
+        
         $namespace = $this->determineNamespace($splithead[0]);
+
+
         $stock[] = $this->determineLicense($splithead[0]);
-        $stock[] = $namespace;
+        $stock[] = 'namespace '.$this->intrNamespace.';';
+
         $stock[] = 'interface ' . $intrname . ' {';
 
         include $srcPath;
 
         $fullclassn = substr($namespace, 10, -1) . '\\' . $classname;
-
-        $methods = get_class_methods($fullclassn);
+        if(!class_exists($fullclassn)){
+            return ['err' => 'could not call ' . $fullclassn];
+        }
+        $reflc = new \ReflectionClass($fullclassn);
+        $methods = $reflc->getMethods(\ReflectionProperty::IS_PUBLIC);
         foreach ($methods as $method) {
             if (!empty($method)) {
-                $stock[] = 'public function ' . $method . '(' . $this->getParamListAndDflts($fullclassn, $method) . ');';
+                $statc = ' ';
+                if ($method->isStatic()) {
+                    $statc = ' static ';
+                }
+                $stock[] = 'public' . $statc . 'function ' . $method->getName() . '(' . $this->getParamListAndDflts($method) . ');';
             }
         }
         $stock[] = '}';
         $stock = implode(PHP_EOL, $stock);
+
         $write = file_put_contents($destPath, $stock, LOCK_EX);
-        if ($write === false) {
+        if (!$write) {
             ['skipped' => 'impossible to save interface "' . $intrname . '"'];
         }
         $rslt = ['success' => $classname];
@@ -142,19 +163,32 @@ class Igor implements Igor_i
         return $rslt;
     }
 
+    protected function fixIntrNamespace($intrNamespace)
+    {
+        $intrNamespace = trim($intrNamespace);
+       if(empty($intrNamespace)){
+           return '';
+       }
+       if(stripos($intrNamespace, 'namespace') !== false){
+        $intrNamespace = substr($intrNamespace,10);
+       }
+       return trim($intrNamespace,";");
+    }
+
     protected function addImplements($srcPath, $rawcntent, $intrname, $classname)
     {
-        $pattern = '/(class\s+\w+\s*(extends\s+\w+\s*)?)((implements)\s+[\w,\s]+)?\s*{/i';
+        $pattern = '/(class\s+\w+\s*(extends\s+\w+\s*)?)((implements)\s+[\w,\s,\\\]+)?\s*/i';
         $preg = preg_match($pattern, $rawcntent, $matches);
-        $lastk = array_key_last($matches);
-        if (strtolower($matches[$lastk]) == 'implements') {
-            $prev = $matches[$lastk - 1];
+
+        $fullIntrName = '\\'.$this->intrNamespace.'\\'. $intrname;
+        if (strtolower(end($matches)) == 'implements') {
+            $prev = prev($matches);
             if (strpos($prev, $intrname) !== false) {
                 return ['skipped' => '"' . $classname . '" already implements "' . $intrname . '"'];
             }
-            $impl = trim($prev) . ', ' . $intrname;
+            $impl = trim($prev) . ', ' . $fullIntrName;
         } else {
-            $impl = 'implements ' . $intrname;
+            $impl = 'implements ' . $fullIntrName;
         }
         $old = $matches[1];
         $split = explode($old, $rawcntent);
@@ -164,19 +198,45 @@ class Igor implements Igor_i
         if ($save === false) {
             return ['err' => 'impossible to save edited src file; provided path: ' . $srcPath];
         }
-        return ['success' => $classname . '" now implements "' . $intrname . '"'];
+        return ['success' => '"'.$classname . '" now implements "' . $intrname . '"'];
 
     }
 
-    protected function getParamListAndDflts($classn, $method)
+    protected function getAllTypes($param)
     {
-        $reflc = new \ReflectionMethod($classn, $method);
-        $params = $reflc->getParameters();
+        $output = '';
+        if ($reflcType = $param->getType()) {
+
+            if ($reflcType instanceof \ReflectionUnionType) {
+                $types = $reflcType->getTypes();
+                $typesNames = [];
+                foreach ($types as $type) {                 
+                    if ($name = $type->getName()) {
+                        $typesNames[]= $name;
+                    }             
+                }
+                $output = implode('|',$typesNames);
+            } else {
+                $name = $reflcType->getName();
+                if ($name != 'mixed' && $param->allowsNull()) {
+                    $output = '?' . $name;
+                } else {
+                    $output = $name;
+                }
+            }
+           
+        }
+        return $output;
+    }
+
+    protected function getParamListAndDflts($method)
+    {
+        $params = $method->getParameters();
         $stack = [];
         if (!empty($params)) {
             foreach ($params as $param) {
-
-                $mthline = '$' . $param->getName();
+                $mthline = $this->getAllTypes($param);
+                $mthline .= ' $' . $param->getName();
 
                 if ($param->isOptional()) {
                     $dflt = $param->getDefaultValue();
@@ -218,7 +278,7 @@ class Igor implements Igor_i
     protected function analyseIntrfdir($intrDir)
     {
 
-        $intrDir = Jack\File::reqTrailingSlash($intrDir);
+        $intrDir = trim($intrDir, ' \n\r\t\v\0/\\') . '/';
         if (in_array($intrDir, ['/', './'])) {
             $intrDir = $this->srcDir;
         }
