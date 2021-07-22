@@ -13,6 +13,7 @@ class IgorCli
     private $src;
     private $dst;
     private $key;
+    private $nms;
 
     public function __construct($runBuild = false)
     {
@@ -28,6 +29,7 @@ class IgorCli
         $this->src = '';
         $this->dst = '';
         $this->key = '';
+        $this->nms = '';
     }
 
     public function build()
@@ -46,7 +48,6 @@ class IgorCli
 
     private function setSrc()
     {
-
         $next = 'Set source ';
         if ($this->key == 1) {
             $next .= 'dir';
@@ -83,6 +84,23 @@ class IgorCli
             return $this->setDst();
         }
         $this->dst = $resp;
+        return $this->setNms();
+    }
+
+    private function setNms()
+    {$s = '';
+        if ($this->key == 1) {
+            $s = 's';
+        }
+        $next = 'Set interface' . $s . ' namespace >';
+
+        $this->Companion::msg($next);
+        $resp = $this->Companion->listenToRequest();
+        if (!empty($resp) && strpos($resp, '\\') === false) {
+            $this->Companion::msg('Sorry, seems like an unvalid namespace', 'yellow');
+            return $this->setNamespace();
+        }
+        $this->nms = $resp;
         return $this->handleCmd();
     }
 
@@ -91,11 +109,13 @@ class IgorCli
         if (empty($this->key) || empty($this->dst) || empty($this->src)) {
             return false;
         }
+
         $method = 'doOneInterface';
         if ($this->key == 1) {
             $method = 'doALLtheInterfaces';
         }
-        $build = $this->Igor->$method($this->src, $this->dst);
+        
+        $build = $this->Igor->set_intrNamespace($this->nms)->$method($this->src, $this->dst);
         $this->reset();
         $this->key = $this->Companion->printRslt($build, false, true, $this->callableMap);
         return $this->transition();
