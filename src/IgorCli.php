@@ -88,12 +88,12 @@ class IgorCli
     }
 
     private function setNms()
-    {    $s = '';
+    {$s = '';
         if ($this->key == 1) {
             $s = 's';
         }
-        $next = 'Set interface'.$s .' namespace >';
-        
+        $next = 'Set interface' . $s . ' namespace >';
+
         $this->Companion::msg($next);
         $resp = $this->Companion->listenToRequest();
         if (!empty($resp) && strpos($resp, '\\') === false) {
@@ -114,7 +114,8 @@ class IgorCli
         if ($this->key == 1) {
             $method = 'doALLtheInterfaces';
         }
-        $build = $this->Igor->$method($this->src, $this->dst, $this->nms);
+        
+        $build = $this->Igor->set_intrNamespace($this->nms)->$method($this->src, $this->dst);
         $this->reset();
         $this->key = $this->Companion->printRslt($build, false, true, $this->callableMap);
         return $this->transition();

@@ -19,7 +19,56 @@ class Igor implements Igor_i
     protected $srcFiles;
     protected $intrNamespace;
 
-    public function doALLtheInterfaces($srcDir, $intrDir, $intrNamespace = '')
+    public function set_srcFilesGlobpattrn(string $pattern)
+    {
+        $this->srcFilesGlobpattrn = $pattern;
+        return $this;
+    }
+    public function set_intrFilesGlobpattrn(string $pattern)
+    {
+        $this->intrFilesGlobpattrn = $pattern;
+        return $this;
+    }
+
+    public function set_intrFilesSuffx(string $suffx)
+    {
+        $this->intrFilesSuffx = $suffx;
+        return $this;
+    }
+    public function set_intrFilesPrefx(string $prefx)
+    {
+        $this->intrFilesPrefx = $prefx;
+        return $this;
+    }
+
+    public function set_licenseMention(string $mention)
+    {
+        $this->licenseMention = $mention;
+        return $this;
+    }
+    public function set_autoSearchLicense(bool $bool)
+    {
+        $this->autoSearchLicense = $bool;
+        return $this;
+    }
+    public function set_rewrite(bool $bool)
+    {
+        $this->rewrite = $bool;
+        return $this;
+    }
+    public function set_addImplementsToSrc(bool $bool)
+    {
+        $this->addImplementsToSrc = $bool;
+        return $this;
+    }
+
+    public function set_intrNamespace(string $intrNamespace)
+    {
+        $this->intrNamespace = $this->fixIntrNamespace($intrNamespace);
+        return $this;
+    }
+
+    public function doALLtheInterfaces(string $srcDir, string $intrDir)
     {
         foreach ([$srcDir, $intrDir] as $dir) {
             if (!is_dir($dir)) {
@@ -36,10 +85,7 @@ class Igor implements Igor_i
             return ['err' => 'no src file found here: ' . $srcDir];
         }
 
-        $this->intrDir = $this->analyseIntrfdir($intrDir);
-
-        $this->intrNamespace = $this->fixIntrNamespace($intrNamespace);
-
+        $this->set_intrNamespace($intrNamespace);
         if ($this->rewrite !== true) {
             return $this->filterFiles();
         }
@@ -47,60 +93,7 @@ class Igor implements Igor_i
         return $this->buildIterator();
     }
 
-    protected function filterFiles()
-    {
-        if (empty($this->intrFilesGlobpattrn)) {
-            $this->guess_intrFilesGlobpattrn();
-        }
-        $intrFiles = glob($this->intrDir . $this->intrFilesGlobpattrn);
-        if (!empty($intrFiles)) {
-            $rslt = [];
-            $baseIntfiles = array_map(function ($it) {return basename($it);}, $intrFiles);
-            foreach ($this->srcFiles as $srck => $srcPath) {
-                $matchIntfName = $this->matchIntfName($srcPath);
-                if (!in_array($matchIntfName, $baseIntfiles)) {
-                    $rslt[] = $this->doInterface($srcPath, $this->intrDir . $matchIntfName);
-                }
-            }
-            return $rslt;
-        }
-        return $this->buildIterator();
-    }
-
-    protected function matchIntfName($path)
-    {
-        $basename = basename($path, '.php');
-        if (!empty($this->intrFilesSuffx)) {
-            $basename .= $this->intrFilesSuffx;
-        }
-        if (!empty($this->intrFilesPrefx)) {
-            $basename = $this->intrFilesPrefx . $basename;
-        }
-        return $basename . '.php';
-    }
-
-    protected function buildIterator()
-    {
-        $rslt = [];
-        foreach ($this->srcFiles as $srck => $srcPath) {
-            $destPath = $this->intrDir . $this->matchIntfName($srcPath);
-            $rslt[] = $this->doInterface($srcPath, $destPath);
-        }
-        return $rslt;
-    }
-
-    protected function checkContent($splithead)
-    {
-        return (count($splithead) > 1 && stripos($splithead[0], 'abstract') === false);
-    }
-
-    public function doOneInterface($srcPath, $destPath, $intrNamespace = '')
-    {
-        $this->intrNamespace = $this->fixIntrNamespace($intrNamespace);
-        return $this->doInterface($srcPath, $destPath);
-    }
-
-    protected function doInterface($srcPath, $destPath)
+    public function doOneInterface(string $srcPath, string $destPath)
     {
         if ($srcPath == $destPath) {
             return ['err' => 'Nope: src path and dest path are the same; this would erase src file'];
@@ -162,6 +155,53 @@ class Igor implements Igor_i
         return $rslt;
     }
 
+    protected function filterFiles()
+    {
+        if (empty($this->intrFilesGlobpattrn)) {
+            $this->guess_intrFilesGlobpattrn();
+        }
+        $intrFiles = glob($this->intrDir . $this->intrFilesGlobpattrn);
+        if (!empty($intrFiles)) {
+            $rslt = [];
+            $baseIntfiles = array_map(function ($it) {return basename($it);}, $intrFiles);
+            foreach ($this->srcFiles as $srck => $srcPath) {
+                $matchIntfName = $this->matchIntfName($srcPath);
+                if (!in_array($matchIntfName, $baseIntfiles)) {
+                    $rslt[] = $this->doInterface($srcPath, $this->intrDir . $matchIntfName);
+                }
+            }
+            return $rslt;
+        }
+        return $this->buildIterator();
+    }
+
+    protected function matchIntfName($path)
+    {
+        $basename = basename($path, '.php');
+        if (!empty($this->intrFilesSuffx)) {
+            $basename .= $this->intrFilesSuffx;
+        }
+        if (!empty($this->intrFilesPrefx)) {
+            $basename = $this->intrFilesPrefx . $basename;
+        }
+        return $basename . '.php';
+    }
+
+    protected function buildIterator()
+    {
+        $rslt = [];
+        foreach ($this->srcFiles as $srck => $srcPath) {
+            $destPath = $this->intrDir . $this->matchIntfName($srcPath);
+            $rslt[] = $this->doInterface($srcPath, $destPath);
+        }
+        return $rslt;
+    }
+
+    protected function checkContent($splithead)
+    {
+        return (count($splithead) > 1 && stripos($splithead[0], 'abstract') === false);
+    }
+
     protected function fixIntrNamespace($intrNamespace)
     {
         $intrNamespace = trim($intrNamespace);
@@ -180,19 +220,20 @@ class Igor implements Igor_i
         $preg = preg_match($pattern, $rawcntent, $matches);
 
         $fullIntrName = '\\' . $this->intrNamespace . '\\' . $intrname;
-        if (strtolower(end($matches)) == 'implements') {
-            $prev = prev($matches);
+        $lastMatch = trim(strtolower(end($matches)));
+        $prev = trim(prev($matches));
+
+        if ($lastMatch == 'implements') {
             if (strpos($prev, $intrname) !== false) {
                 return ['skipped' => '"' . $classname . '" already implements "' . $intrname . '"'];
             }
-            $impl = trim($prev) . ', ' . $fullIntrName;
+            $impl = $prev . ', ' . $fullIntrName;
         } else {
             $impl = 'implements ' . $fullIntrName;
         }
-        $old = $matches[1];
-        $split = explode($old, $rawcntent);
-        $nw = trim($old) . ' ' . $impl . ' ';
-        $nwcontent = implode($nw, $split);
+
+        $split = explode($prev, $rawcntent);
+        $nwcontent = implode($impl, $split);
         $save = file_put_contents($srcPath, $nwcontent, LOCK_EX);
         if ($save === false) {
             return ['err' => 'impossible to save edited src file; provided path: ' . $srcPath];
@@ -309,38 +350,4 @@ class Igor implements Igor_i
         }
     }
 
-    public function set_srcFilesGlobpattrn(string $pattern)
-    {
-        $this->srcFilesGlobpattrn = $pattern;
-    }
-    public function set_intrFilesGlobpattrn(string $pattern)
-    {
-        $this->intrFilesGlobpattrn = $pattern;
-    }
-
-    public function set_intrFilesSuffx(string $suffx)
-    {
-        $this->intrFilesSuffx = $suffx;
-    }
-    public function set_intrFilesPrefx(string $prefx)
-    {
-        $this->intrFilesPrefx = $prefx;
-    }
-
-    public function set_licenseMention(string $mention)
-    {
-        $this->licenseMention = $mention;
-    }
-    public function set_autoSearchLicense(bool $bool)
-    {
-        $this->autoSearchLicense = $bool;
-    }
-    public function set_rewrite(bool $bool)
-    {
-        $this->rewrite = $bool;
-    }
-    public function set_addImplementsToSrc(bool $bool)
-    {
-        $this->addImplementsToSrc = $bool;
-    }
 }
