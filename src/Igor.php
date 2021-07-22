@@ -19,8 +19,7 @@ class Igor implements Igor_i
     protected $srcFiles;
     protected $intrNamespace;
 
-
-    public function doALLtheInterfaces($srcDir, $intrDir, $intrNamespace)
+    public function doALLtheInterfaces($srcDir, $intrDir, $intrNamespace = '')
     {
         foreach ([$srcDir, $intrDir] as $dir) {
             if (!is_dir($dir)) {
@@ -95,7 +94,8 @@ class Igor implements Igor_i
         return (count($splithead) > 1 && stripos($splithead[0], 'abstract') === false);
     }
 
-    public function doOneInterface($srcPath, $destPath, $intrNamespace){
+    public function doOneInterface($srcPath, $destPath, $intrNamespace = '')
+    {
         $this->intrNamespace = $this->fixIntrNamespace($intrNamespace);
         return $this->doInterface($srcPath, $destPath);
     }
@@ -121,19 +121,18 @@ class Igor implements Igor_i
         $matchclassname = \preg_match($classnpattern, $splithead[1], $matches);
         $classname = $matches[0];
         $intrname = basename($destPath, '.php');
-        
+
         $namespace = $this->determineNamespace($splithead[0]);
 
-
         $stock[] = $this->determineLicense($splithead[0]);
-        $stock[] = 'namespace '.$this->intrNamespace.';';
+        $stock[] = 'namespace ' . $this->intrNamespace . ';';
 
         $stock[] = 'interface ' . $intrname . ' {';
 
         include $srcPath;
 
         $fullclassn = substr($namespace, 10, -1) . '\\' . $classname;
-        if(!class_exists($fullclassn)){
+        if (!class_exists($fullclassn)) {
             return ['err' => 'could not call ' . $fullclassn];
         }
         $reflc = new \ReflectionClass($fullclassn);
@@ -166,13 +165,13 @@ class Igor implements Igor_i
     protected function fixIntrNamespace($intrNamespace)
     {
         $intrNamespace = trim($intrNamespace);
-       if(empty($intrNamespace)){
-           return '';
-       }
-       if(stripos($intrNamespace, 'namespace') !== false){
-        $intrNamespace = substr($intrNamespace,10);
-       }
-       return trim($intrNamespace,";");
+        if (empty($intrNamespace)) {
+            return '';
+        }
+        if (stripos($intrNamespace, 'namespace') !== false) {
+            $intrNamespace = substr($intrNamespace, 10);
+        }
+        return trim($intrNamespace, ";");
     }
 
     protected function addImplements($srcPath, $rawcntent, $intrname, $classname)
@@ -180,7 +179,7 @@ class Igor implements Igor_i
         $pattern = '/(class\s+\w+\s*(extends\s+\w+\s*)?)((implements)\s+[\w,\s,\\\]+)?\s*/i';
         $preg = preg_match($pattern, $rawcntent, $matches);
 
-        $fullIntrName = '\\'.$this->intrNamespace.'\\'. $intrname;
+        $fullIntrName = '\\' . $this->intrNamespace . '\\' . $intrname;
         if (strtolower(end($matches)) == 'implements') {
             $prev = prev($matches);
             if (strpos($prev, $intrname) !== false) {
@@ -198,7 +197,7 @@ class Igor implements Igor_i
         if ($save === false) {
             return ['err' => 'impossible to save edited src file; provided path: ' . $srcPath];
         }
-        return ['success' => '"'.$classname . '" now implements "' . $intrname . '"'];
+        return ['success' => '"' . $classname . '" now implements "' . $intrname . '"'];
 
     }
 
@@ -210,12 +209,12 @@ class Igor implements Igor_i
             if ($reflcType instanceof \ReflectionUnionType) {
                 $types = $reflcType->getTypes();
                 $typesNames = [];
-                foreach ($types as $type) {                 
+                foreach ($types as $type) {
                     if ($name = $type->getName()) {
-                        $typesNames[]= $name;
-                    }             
+                        $typesNames[] = $name;
+                    }
                 }
-                $output = implode('|',$typesNames);
+                $output = implode('|', $typesNames);
             } else {
                 $name = $reflcType->getName();
                 if ($name != 'mixed' && $param->allowsNull()) {
@@ -224,7 +223,7 @@ class Igor implements Igor_i
                     $output = $name;
                 }
             }
-           
+
         }
         return $output;
     }
